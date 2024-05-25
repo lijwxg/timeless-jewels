@@ -405,7 +405,7 @@ export const constructQuery = (jewel: number, conqueror: string, result: SearchW
           min: result[0].seed,
           max: result[0].seed
         },
-        disabled: conq != conqueror
+        disabled: false
       });
     }
 
@@ -457,9 +457,19 @@ export const constructQuery = (jewel: number, conqueror: string, result: SearchW
   return {
     query: {
       status: {
-        option: 'online'
+        option: 'any'
       },
-      stats: final_query
+      stats: final_query,
+      // filters: {
+      //   "trade_filters": {
+      //       "disabled": false,
+      //       "filters": {
+      //           "price": {
+      //               "max": 100
+      //           }
+      //       }
+      //   }
+      // }
     },
     sort: {
       price: 'asc'
@@ -468,7 +478,7 @@ export const constructQuery = (jewel: number, conqueror: string, result: SearchW
 };
 
 export const openTrade = (jewel: number, conqueror: string, results: SearchWithSeed[]) => {
-  const url = new URL('https://www.pathofexile.com/trade/search/Necropolis');
+  const url = new URL('https://poe.game.qq.com/trade/search/S25%E8%B5%9B%E5%AD%A3');
   url.searchParams.set('q', JSON.stringify(constructQuery(jewel, conqueror, results)));
   window.open(url, '_blank');
 };
