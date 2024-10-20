@@ -4,7 +4,7 @@
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
   import type { Node } from '../../lib/skill_tree_types';
-  import { getAffectedNodes, skillTree, translateStat, openTrade } from '../../lib/skill_tree';
+  import { getAffectedNodes, skillTree, translateStat, openTradePage } from '../../lib/skill_tree';
   import { syncWrap } from '../../lib/worker';
   import { proxy } from 'comlink';
   import type { ReverseSearchConfig, StatConfig } from '../../lib/skill_tree';
@@ -234,6 +234,9 @@
     localStorage.getItem('groupResults') === null ? true : localStorage.getItem('groupResults') === 'true';
   $: localStorage.setItem('groupResults', groupResults ? 'true' : 'false');
 
+  let multi = localStorage.getItem('multi') === null ? true : localStorage.getItem('multi') === 'true';
+  $: localStorage.setItem('multi', multi ? 'true' : 'false');
+
   type CombinedResult = {
     id: string;
     rawStat: string;
@@ -376,6 +379,9 @@
   let split = localStorage.getItem('split') === null ? true : localStorage.getItem('split') === 'true';
   $: localStorage.setItem('split', split ? 'true' : 'false');
 
+  let page_number = 1;
+  let size_number = 10;
+
   const onPaste = (event: ClipboardEvent) => {
     if (event.type !== 'paste') {
       return;
@@ -457,21 +463,36 @@
           {#if searchResults}
             <div class="flex flex-row">
               {#if results}
+                <input class="p-1 px-3 rounded mr-2 search" bind:value={page_number}>
+                <input class="p-1 px-3 rounded mr-2 search" bind:value={size_number}>
                 <button
-                  class="p-1 px-3 bg-blue-500/40 rounded disabled:bg-blue-900/40 mr-2"
-                  on:click={() => openTrade(searchJewel, searchConqueror, searchResults.raw)}
+                  class="p-1 px-3 bg-blue-500/40 rounded disabled:bg-blue-900/40 mr-2 search"
+                  class:single={!multi}
+                  on:click={() => (multi = !multi)}
+                  disabled={!searchResults}>
+                  Multi
+                </button>
+                <button
+                  class="p-1 px-3 bg-blue-500/40 rounded disabled:bg-blue-900/40 mr-2 search"
+                  on:click={() => openTradePage(searchJewel, searchConqueror, searchResults.raw, page_number, size_number)}
                   disabled={!searchResults}>
                   Trade
                 </button>
                 <button
-                  class="p-1 px-3 bg-blue-500/40 rounded disabled:bg-blue-900/40 mr-2"
+                  class="p-1 px-3 bg-blue-500/40 rounded disabled:bg-blue-900/40 mr-2 search"
+                  on:click={() => openTradePage(searchJewel, searchConqueror, searchResults.raw, page_number, size_number, "cn")}
+                  disabled={!searchResults}>
+                  TradeCN
+                </button>
+                <button
+                  class="p-1 px-3 bg-blue-500/40 rounded disabled:bg-blue-900/40 mr-2 search"
                   class:grouped={groupResults}
                   on:click={() => (groupResults = !groupResults)}
                   disabled={!searchResults}>
                   Grouped
                 </button>
               {/if}
-              <button class="bg-neutral-100/20 px-4 p-1 rounded" on:click={() => (results = !results)}>
+              <button class="bg-neutral-100/20 px-4 p-1 rounded search" on:click={() => (results = !results)}>
                 {results ? 'Config' : 'Results'}
               </button>
             </div>
@@ -703,6 +724,14 @@
 
   .rainbow {
     animation: colorRotate 2s linear 0s infinite;
+  }
+
+  .single {
+    @apply bg-neutral-100/20
+  }
+
+  .search {
+    font-size: 50%;
   }
 
   @keyframes colorRotate {

@@ -355,23 +355,19 @@ const tradeStatNames: { [key: number]: { [key: string]: string } } = {
   1: {
     Ahuana: 'explicit.pseudo_timeless_jewel_ahuana',
     Xibaqua: 'explicit.pseudo_timeless_jewel_xibaqua',
-    Doryani: 'explicit.pseudo_timeless_jewel_doryani',
-    Zerphi: 'explicit.pseudo_timeless_jewel_zerphi'
+    Doryani: 'explicit.pseudo_timeless_jewel_doryani'
   },
   2: {
     Kaom: 'explicit.pseudo_timeless_jewel_kaom',
     Rakiata: 'explicit.pseudo_timeless_jewel_rakiata',
-    Kiloava: 'explicit.pseudo_timeless_jewel_kiloava',
     Akoya: 'explicit.pseudo_timeless_jewel_akoya'
   },
   3: {
-    Deshret: 'explicit.pseudo_timeless_jewel_deshret',
     Balbala: 'explicit.pseudo_timeless_jewel_balbala',
     Asenath: 'explicit.pseudo_timeless_jewel_asenath',
     Nasima: 'explicit.pseudo_timeless_jewel_nasima'
   },
   4: {
-    Venarius: 'explicit.pseudo_timeless_jewel_venarius',
     Maxarius: 'explicit.pseudo_timeless_jewel_maxarius',
     Dominus: 'explicit.pseudo_timeless_jewel_dominus',
     Avarius: 'explicit.pseudo_timeless_jewel_avarius'
@@ -379,15 +375,11 @@ const tradeStatNames: { [key: number]: { [key: string]: string } } = {
   5: {
     Cadiro: 'explicit.pseudo_timeless_jewel_cadiro',
     Victario: 'explicit.pseudo_timeless_jewel_victario',
-    Chitus: 'explicit.pseudo_timeless_jewel_chitus',
     Caspiro: 'explicit.pseudo_timeless_jewel_caspiro'
   }
 };
 
-export const constructQuery = (jewel: number, conqueror: string, result: SearchWithSeed[]) => {
-  const max_filter_length = 50;
-  const max_filters = 4;
-  const max_query_length = max_filter_length * max_filters;
+export const constructQueryOne = (jewel: number, conqueror: string, result: SearchWithSeed[], multi: boolean) => {
   const final_query = [];
   const stat = {
     type: 'count',
@@ -395,7 +387,6 @@ export const constructQuery = (jewel: number, conqueror: string, result: SearchW
     filters: [],
     disabled: false
   };
-
   // single seed case
   if (result.length == 1) {
     for (const conq of Object.keys(tradeStatNames[jewel])) {
@@ -405,70 +396,77 @@ export const constructQuery = (jewel: number, conqueror: string, result: SearchW
           min: result[0].seed,
           max: result[0].seed
         },
-        disabled: conq != conqueror
+        disabled: multi ? false: conq != conqueror
       });
     }
 
     final_query.push(stat);
-    // too many results case
-  } else if (result.length > max_query_length) {
-    for (let i = 0; i < max_filters; i++) {
-      final_query.push({
-        type: 'count',
-        value: { min: 1 },
-        filters: [],
-        disabled: i == 0 ? false : true
-      });
+  }
+  return final_query;
+};
+
+export const constructQueryPage = (jewel: number, conqueror: string, result: SearchWithSeed[], multi: boolean, page:number, size:number) => {
+    if (page < 1){
+        console.log("page must greater than 0")
     }
-
-    for (const [i, r] of result.slice(0, max_query_length).entries()) {
-      const index = Math.floor(i / max_filter_length);
-
-      final_query[index].filters.push({
-        id: tradeStatNames[jewel][conqueror],
-        value: {
-          min: r.seed,
-          max: r.seed
-        }
-      });
+    const start = (page -1) * size
+    if (size < 1){
+        console.log("size must greater than 0")
     }
-  } else {
-    for (const conq of Object.keys(tradeStatNames[jewel])) {
-      stat.disabled = conq != conqueror;
+    const end = page * size
+    const final_query = [];
+    let stat = {
+      type: 'count',
+      value: { min: 1 },
+      filters: [],
+      disabled: false
+    };
 
-      for (const r of result) {
+    for (const [i, r] of result.slice(start, end).entries()) {
+      for (const conq of multi ? Object.keys(tradeStatNames[jewel]): [conqueror]) {
         stat.filters.push({
           id: tradeStatNames[jewel][conq],
           value: {
-            min: r.seed,
-            max: r.seed
-          }
+              min: r.seed,
+              max: r.seed
+          },
+          disabled: false
         });
       }
-
-      if (stat.filters.length > max_filter_length) {
-        stat.filters = stat.filters.slice(0, max_filter_length);
-      }
-
-      final_query.push(stat);
     }
-  }
-
-  return {
-    query: {
-      status: {
-        option: 'online'
-      },
-      stats: final_query
-    },
-    sort: {
-      price: 'asc'
-    }
+    final_query.push(stat);
+    return final_query;
   };
+
+export const openTradeOne = (jewel: number, conqueror: string, results: SearchWithSeed[], locale = "en") => {
+  let multi = localStorage.getItem('multi') === null ? true : localStorage.getItem('multi') === 'true';
+  const param = JSON.stringify(constructQueryOne(jewel, conqueror, results, multi));
+  openTrade(jewel, conqueror, results, param)
 };
 
-export const openTrade = (jewel: number, conqueror: string, results: SearchWithSeed[]) => {
-  const url = new URL('https://www.pathofexile.com/trade/search/Necropolis');
-  url.searchParams.set('q', JSON.stringify(constructQuery(jewel, conqueror, results)));
-  window.open(url, '_blank');
+export const openTradePage = (jewel: number, conqueror: string, results: SearchWithSeed[],page:number, size: number, locale = "en") => {
+    let multi = localStorage.getItem('multi') === null ? true : localStorage.getItem('multi') === 'true';
+    const final_query = constructQueryPage(jewel, conqueror, results, multi, page, size)
+    const param = JSON.stringify({
+      query: {
+        status: {
+          option: 'any'
+        },
+        stats: final_query
+      },
+      sort: {
+        price: 'asc'
+      }
+    });
+    openTrade(jewel, conqueror, results, param)
+};
+
+export const openTrade = (jewel: number, conqueror: string, results: SearchWithSeed[], param:string, locale = "en") => {
+    let trade_url = "https://www.pathofexile.com/trade/search/";
+    if (locale == "cn") {
+      trade_url = "https://poe.game.qq.com/trade/search/"
+    }
+    const url = new URL(trade_url);
+    url.searchParams.set('q', param);
+    window.open(url, '_blank');
 };
