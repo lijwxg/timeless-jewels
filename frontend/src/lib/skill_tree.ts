@@ -1,3 +1,4 @@
+import { list } from 'postcss';
 import type { Translation, Node, SkillTreeData, Group, Sprite, TranslationFile } from './skill_tree_types';
 import { data } from './types';
 
@@ -440,17 +441,29 @@ export const constructQueryPage = (jewel: number, conqueror: string, result: Sea
 
 export const openTradeOne = (jewel: number, conqueror: string, results: SearchWithSeed[], locale = "en") => {
   let multi = localStorage.getItem('multi') === null ? true : localStorage.getItem('multi') === 'true';
-  const param = JSON.stringify(constructQueryOne(jewel, conqueror, results, multi));
-  openTrade(jewel, conqueror, results, param)
+  const final_query = constructQueryOne(jewel, conqueror, results, multi)
+  openTrade(jewel, conqueror, results, final_query, locale)
 };
 
 export const openTradePage = (jewel: number, conqueror: string, results: SearchWithSeed[],page:number, size: number, locale = "en") => {
     let multi = localStorage.getItem('multi') === null ? true : localStorage.getItem('multi') === 'true';
     const final_query = constructQueryPage(jewel, conqueror, results, multi, page, size)
+    openTrade(jewel, conqueror, results, final_query, locale)
+};
+
+export const openTrade = (jewel: number, conqueror: string, results: SearchWithSeed[], final_query, locale = "en") => {
+    let trade_url = "https://www.pathofexile.com/trade/search/";
+    if (locale == "cn") {
+      trade_url = "https://poe.game.qq.com/trade/search/"
+    }
+    const url = new URL(trade_url);
     const param = JSON.stringify({
       query: {
         status: {
           option: 'any'
+        },
+        filters: {
+
         },
         stats: final_query
       },
@@ -458,15 +471,6 @@ export const openTradePage = (jewel: number, conqueror: string, results: SearchW
         price: 'asc'
       }
     });
-    openTrade(jewel, conqueror, results, param)
-};
-
-export const openTrade = (jewel: number, conqueror: string, results: SearchWithSeed[], param:string, locale = "en") => {
-    let trade_url = "https://www.pathofexile.com/trade/search/";
-    if (locale == "cn") {
-      trade_url = "https://poe.game.qq.com/trade/search/"
-    }
-    const url = new URL(trade_url);
     url.searchParams.set('q', param);
     window.open(url, '_blank');
 };
